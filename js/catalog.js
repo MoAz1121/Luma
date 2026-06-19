@@ -91,6 +91,26 @@ function _buildFurniture(geos) {
   return grp;
 }
 
+// ── Photo texture (shared, lazy-loaded, aspect-fit) ─────────────────────────
+const _PHOTO_MAX = .56;
+let _photoTex = null, _photoAspect = 0;
+const _photoMeshes = [];
+function _photoTexture() {
+  if (!_photoTex) {
+    _photoTex = new THREE.TextureLoader().load('assets/photo.jpg', (t) => {
+      _photoAspect = t.image.width / t.image.height;
+      _photoMeshes.forEach(_fitPhoto);
+    });
+    _photoTex.encoding = THREE.sRGBEncoding;
+  }
+  return _photoTex;
+}
+function _fitPhoto(m) {
+  if (!_photoAspect) { m.scale.set(_PHOTO_MAX, _PHOTO_MAX, 1); return; }
+  if (_photoAspect >= 1) m.scale.set(_PHOTO_MAX, _PHOTO_MAX / _photoAspect, 1);
+  else                   m.scale.set(_PHOTO_MAX * _photoAspect, _PHOTO_MAX, 1);
+}
+
 // ── Room types ────────────────────────────────────────────────────────────
 const ROOM_TYPES = {
   bedroom: { label: 'Slaapkamer', wall: 0xaa88c8, floor: 0xd4a060 },
@@ -604,10 +624,20 @@ const CATALOG = [
       { label: 'Wit',   hex: 0xf0ece4 },
     ],
     build(h = 0xe0c060) {
-      return _buildFurniture([
-        _bg(.74, .74, .06, h,          0, 0,    0),
-        _bg(.56, .56, .04, 0xc8d8e8,   0, 0, .02),
+      const grp = _buildFurniture([
+        _bg(.74, .74, .06, h,        0, 0,    0),
+        _bg(.60, .60, .04, 0x201c1c, 0, 0, .02),  // dark mat behind photo
       ]);
+      const photo = new THREE.Mesh(
+        new THREE.PlaneGeometry(1, 1),
+        new THREE.MeshBasicMaterial({ map: _photoTexture() })
+      );
+      photo.position.z = .045;
+      photo.raycast = () => {};   // exclude from hit-testing
+      _photoMeshes.push(photo);
+      _fitPhoto(photo);
+      grp.add(photo);
+      return grp;
     }
   },
 ];
