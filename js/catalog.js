@@ -111,12 +111,42 @@ function _fitPhoto(m) {
   else                   m.scale.set(_PHOTO_MAX * _photoAspect, _PHOTO_MAX, 1);
 }
 
+// ── Soft radial glow texture (shared) — warm light pools ────────────────────
+let _glowTex = null;
+function _glowTexture() {
+  if (!_glowTex) {
+    const c = document.createElement('canvas'); c.width = c.height = 128;
+    const x = c.getContext('2d');
+    const g = x.createRadialGradient(64, 64, 0, 64, 64, 64);
+    g.addColorStop(0,  'rgba(255,255,255,1)');
+    g.addColorStop(.5, 'rgba(255,255,255,.5)');
+    g.addColorStop(1,  'rgba(255,255,255,0)');
+    x.fillStyle = g; x.fillRect(0, 0, 128, 128);
+    _glowTex = new THREE.CanvasTexture(c);
+  }
+  return _glowTex;
+}
+// Flat horizontal glow disc on the floor — warm light pool under a lamp etc.
+function _floorGlow(size, color, opacity) {
+  const m = new THREE.Mesh(
+    new THREE.PlaneGeometry(size, size),
+    new THREE.MeshBasicMaterial({
+      map: _glowTexture(), color, transparent: true, opacity,
+      depthWrite: false, blending: THREE.AdditiveBlending,
+    })
+  );
+  m.rotation.x = -Math.PI / 2;
+  m.position.y = .015;
+  m.raycast = () => {};
+  return m;
+}
+
 // ── Room types ────────────────────────────────────────────────────────────
 const ROOM_TYPES = {
-  bedroom: { label: 'Slaapkamer', wall: 0xaa88c8, floor: 0xd4a060 },
-  living:  { label: 'Woonkamer',  wall: 0xd0a850, floor: 0xd4a060 },
-  kitchen: { label: 'Keuken',     wall: 0xf0ece8, floor: 0xe8c890 },
-  bathroom:{ label: 'Badkamer',   wall: 0x7aaac8, floor: 0xa8a098 },
+  bedroom: { label: 'Slaapkamer', wall: 0xe3cdd6, floor: 0xc9a877 },
+  living:  { label: 'Woonkamer',  wall: 0xdcc39a, floor: 0xc9a877 },
+  kitchen: { label: 'Keuken',     wall: 0xf2ece2, floor: 0xdcc3a0 },
+  bathroom:{ label: 'Badkamer',   wall: 0x9fc0d6, floor: 0xb0a89e },
 };
 
 // ── Starter layouts (only placed when room_v3_n key is absent) ───────────
@@ -209,7 +239,7 @@ const CATALOG = [
   },
   {
     id: 'lamp', label: 'Vloerlamp', color: '#f5e080', w: 1, d: 1, h: 1.78,
-    roomTypes: ['bedroom', 'living'],
+    roomTypes: ['bedroom', 'living'], interactive: 'lamp',
     colors: [
       { label: 'Crème', hex: 0xf5e080 }, { label: 'Roze', hex: 0xf0b0b8 },
       { label: 'Mint',  hex: 0xa8d8b8 }, { label: 'Wit',  hex: 0xf8f8f0 },
@@ -229,8 +259,12 @@ const CATALOG = [
       const glowGeo = new THREE.CircleGeometry(.11, 12);
       glowGeo.applyMatrix4(_T.makeRotationX(Math.PI / 2));
       glowGeo.applyMatrix4(_T.makeTranslation(0, 1.50, 0));
-      grp.add(new THREE.Mesh(glowGeo,
-        new THREE.MeshBasicMaterial({ color: _lighten(h, .2), side: THREE.DoubleSide })));
+      const bulb = new THREE.Mesh(glowGeo,
+        new THREE.MeshBasicMaterial({ color: _lighten(h, .2), side: THREE.DoubleSide }));
+      bulb.userData.glow = true; grp.add(bulb);
+      // Warm light pool on the floor so the lamp reads as "on"
+      const pool = _floorGlow(1.7, 0xffc070, .38);
+      pool.userData.glow = true; grp.add(pool);
       return grp;
     }
   },

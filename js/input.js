@@ -5,6 +5,8 @@ const DRAG_PX = 16;
 let _ptStart = null, _dragging = false;
 let _movingId = null, _origAI = 0, _origAJ = 0, _origRot = 0;
 let _currentSelPlaced = null;
+let _catHit = false;
+let _personHit = false;
 const _undoStack = [];
 
 // Multi-pointer tracking (pinch zoom)
@@ -42,6 +44,16 @@ function _hitPlaced(p) {
   }
   const h = _rc.intersectObjects(_hitCache);
   return h.length ? h[0].object.userData.pid : null;
+}
+function _hitCat(p) {
+  if (typeof Cat === 'undefined' || !Cat.group || !Cat.enabled) return false;
+  _mv.set(p.x, p.y); _rc.setFromCamera(_mv, camera);
+  return _rc.intersectObject(Cat.group, true).length > 0;
+}
+function _hitPerson(p) {
+  if (typeof Person === 'undefined' || !Person.group || !Person.enabled) return false;
+  _mv.set(p.x, p.y); _rc.setFromCamera(_mv, camera);
+  return _rc.intersectObject(Person.group, true).length > 0;
 }
 function _updatePreview(pt) {
   if (InputState.mode !== 'placing' || !InputState.selDef || !pt) return;
@@ -95,7 +107,7 @@ function initInput() {
     if (_ptrs.size > 1) { _ptStart = null; return; } // entering pinch — cancel single-touch logic
 
     _ptStart = { sx: e.clientX, sy: e.clientY };
-    _dragging = false; _movingId = null;
+    _dragging = false; _movingId = null; _catHit = false; _personHit = false;
 
     const p = _ptr(e);
     if (InputState.mode === 'placing') _updatePreview(_hitFloor(p));
@@ -103,6 +115,8 @@ function initInput() {
     if (InputState.mode === 'idle') {
       const pid = _hitPlaced(p);
       if (pid) { _movingId = pid; _origAI = placed[pid].ai; _origAJ = placed[pid].aj; _origRot = placed[pid].rot; }
+      else if (_hitPerson(p)) _personHit = true;
+      else _catHit = _hitCat(p);
     }
   }, { passive: false });
 
@@ -224,17 +238,26 @@ function initInput() {
       }
 
     } else if (InputState.mode === 'idle' && !_dragging) {
-      if (_movingId) {
+      if (_personHit && !_movingId) {
+        Person.greet(); _personHit = false;
+        setHint('🙋 Hoi!');
+      } else if (_catHit && !_movingId) {
+        Cat.pet(); _catHit = false;
+        setHint('😺 Miauw!');
+      } else if (_movingId) {
+        const reTap = (_currentSelPlaced === _movingId);
         _currentSelPlaced = _movingId;
         showSelectionHighlight(_movingId);
         setSelPlaced(_movingId); showRotBtn(true);
         showColorRow(placed[_movingId].def, placed[_movingId].colorHex);
         playSelect();
         setHint('Verwijder, roteer of herkleur het geselecteerde meubel');
+        showCaption(placed[_movingId].def.id);
+        if (reTap) interactPlaced(_movingId);   // tweede tik = bedienen
       } else {
         _currentSelPlaced = null;
         clearSelectionHighlight();
-        setSelPlaced(null); hideColorRow();
+        setSelPlaced(null); hideColorRow(); hideCaption();
         setHint('Selecteer een meubel hieronder ↓');
       }
       _movingId = null;
@@ -250,10 +273,22 @@ function initInput() {
   }, { passive: false });
 }
 
+// Second tap on a selected interactive item operates it (e.g. lamp on/off)
+function interactPlaced(id) {
+  const item = placed[id];
+  if (!item || !item.def.interactive) return;
+  if (item.def.interactive === 'lamp') {
+    if (item.on === undefined) item.on = true;
+    item.on = !item.on;
+    item.group.traverse(o => { if (o.userData && o.userData.glow) o.visible = item.on; });
+    setHint(item.on ? '💡 Lamp aan' : '🌙 Lamp uit');
+  }
+}
+
 function onCatalogSelect(def, card) {
   if (InputState.mode === 'moving') return;
   clearDragOverlay(); clearSelectionHighlight();
-  _currentSelPlaced = null; setSelPlaced(null);
+  _currentSelPlaced = null; setSelPlaced(null); hideCaption();
 
   if (def && InputState.selDef?.id === def.id) {
     InputState.selDef = null; InputState.mode = 'idle'; InputState.rot = 0;

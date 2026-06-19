@@ -7,6 +7,8 @@ window.addEventListener('DOMContentLoaded', () => {
 
     GS = loadRoomSize();
     _activeRoomType = loadRoomType();
+    Cat.setEnabled(localStorage.getItem('luma_cat_on') !== '0');
+    Person.setEnabled(localStorage.getItem('luma_person_on') !== '0');
     initScene(document.getElementById('c'));
     initUI();
     initInput();
@@ -16,13 +18,21 @@ window.addEventListener('DOMContentLoaded', () => {
     _syncPanelSwatches();
     load();
     loadWallItems();
+    Cat.init();
+    Person.init();
+    showGreeting();
 
-    (function loop() {
+    let _last = performance.now();
+    (function loop(now) {
       requestAnimationFrame(loop);
+      now = now || performance.now();
+      const dt = Math.min(.05, (now - _last) / 1000); _last = now;
       tickPlacement();
       tickParticles();
+      Cat.tick(dt);
+      Person.tick(dt);
       renderer.render(scene, camera);
-    })();
+    })(performance.now());
 
   } catch (err) {
     // Show error visibly instead of silent blank screen

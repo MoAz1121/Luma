@@ -6,7 +6,8 @@
   <title>Kamer Decoratie</title>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
-    body { background: #f5e6d5; overflow: hidden; font-family: 'Segoe UI', Tahoma, sans-serif; }
+    body { background: radial-gradient(ellipse at 50% 42%, #f7ead9 0%, #edd0b4 55%, #d3a87f 100%);
+           overflow: hidden; font-family: 'Segoe UI', Tahoma, sans-serif; }
 
     /* ── Animated bokeh background ── */
     #bg { position: fixed; inset: 0; z-index: 0; overflow: hidden; pointer-events: none; }
@@ -14,22 +15,23 @@
       position: absolute; border-radius: 50%;
       filter: blur(72px); animation: blobanim 20s ease-in-out infinite alternate;
     }
-    .b1{width:620px;height:620px;top:-18%;left:-12%;background:radial-gradient(circle,#ffbe90,transparent);animation-duration:19s;animation-delay:0s}
-    .b2{width:500px;height:500px;bottom:-12%;right:-10%;background:radial-gradient(circle,#ffacc4,transparent);animation-duration:23s;animation-delay:-8s}
-    .b3{width:420px;height:420px;top:18%;right:4%;background:radial-gradient(circle,#ffe08a,transparent);animation-duration:17s;animation-delay:-4s}
-    .b4{width:680px;height:340px;top:58%;left:10%;background:radial-gradient(circle,#ffc8a8,transparent);animation-duration:26s;animation-delay:-12s}
-    .b5{width:300px;height:300px;top:5%;left:40%;background:radial-gradient(circle,#d4b8f0,transparent);animation-duration:21s;animation-delay:-6s}
+    .b1{width:620px;height:620px;top:-18%;left:-12%;background:radial-gradient(circle,#ffcf9e,transparent);animation-duration:19s;animation-delay:0s}
+    .b2{width:500px;height:500px;bottom:-12%;right:-10%;background:radial-gradient(circle,#ffcaa0,transparent);animation-duration:23s;animation-delay:-8s}
+    .b3{width:420px;height:420px;top:18%;right:4%;background:radial-gradient(circle,#ffe2a0,transparent);animation-duration:17s;animation-delay:-4s}
+    .b4{width:680px;height:340px;top:58%;left:10%;background:radial-gradient(circle,#f7d4b0,transparent);animation-duration:26s;animation-delay:-12s}
+    .b5{width:300px;height:300px;top:5%;left:40%;background:radial-gradient(circle,#f5dcae,transparent);animation-duration:21s;animation-delay:-6s}
     @keyframes blobanim {
-      0%  {opacity:.52;transform:translate(0,0) scale(1)}
-      33% {opacity:.65;transform:translate(22px,-18px) scale(1.09)}
-      66% {opacity:.48;transform:translate(-16px,22px) scale(.92)}
-      100%{opacity:.58;transform:translate(12px,28px) scale(1.05)}
+      0%  {opacity:.30;transform:translate(0,0) scale(1)}
+      33% {opacity:.40;transform:translate(22px,-18px) scale(1.09)}
+      66% {opacity:.26;transform:translate(-16px,22px) scale(.92)}
+      100%{opacity:.34;transform:translate(12px,28px) scale(1.05)}
     }
     #vig { position:fixed;inset:0;z-index:3;pointer-events:none;
-           background:radial-gradient(ellipse at 50% 45%,transparent 48%,rgba(160,100,70,.16) 100%); }
+           background:radial-gradient(ellipse at 50% 44%,transparent 40%,rgba(110,68,42,.30) 100%); }
 
     /* ── Canvas ── */
-    #c { position:fixed;top:0;left:0;right:0;bottom:110px;z-index:2;touch-action:none;cursor:default; }
+    #c { position:fixed;top:0;left:0;right:0;bottom:110px;z-index:2;touch-action:none;cursor:default;
+         filter:drop-shadow(0 22px 30px rgba(70,40,20,.30)); }
 
     /* ── Room tabs ── */
     #tabs {
@@ -75,6 +77,30 @@
       border:1.5px solid rgba(232,213,196,.8);
       pointer-events:none;white-space:nowrap;
     }
+
+    /* ── Greeting (shown on open, time-of-day) ── */
+    #greet {
+      position:fixed;top:44%;left:50%;transform:translate(-50%,-50%) scale(.96);
+      z-index:50;background:rgba(255,252,248,.94);backdrop-filter:blur(12px);
+      padding:22px 34px;border-radius:22px;text-align:center;
+      border:1.5px solid rgba(235,215,198,.9);box-shadow:0 12px 40px rgba(150,110,80,.28);
+      pointer-events:none;opacity:0;transition:opacity .6s ease, transform .6s ease;
+    }
+    #greet.show { opacity:1; transform:translate(-50%,-50%) scale(1); }
+    #greet .gmain { font-size:26px;font-weight:700;color:#6e5443; }
+    #greet .gsub  { font-size:14px;color:#a08878;margin-top:6px; }
+
+    /* ── Memory caption (shown when a special item is selected) ── */
+    #cap {
+      position:fixed;top:78px;left:50%;transform:translateX(-50%) translateY(-6px);
+      z-index:13;background:rgba(255,250,245,.95);backdrop-filter:blur(10px);
+      padding:9px 18px;border-radius:18px;max-width:80vw;text-align:center;
+      font-size:13.5px;font-style:italic;color:#7a5e4c;
+      border:1.5px solid rgba(235,205,200,.9);box-shadow:0 6px 22px rgba(160,110,90,.22);
+      pointer-events:none;opacity:0;white-space:nowrap;
+      transition:opacity .45s ease, transform .45s ease;
+    }
+    #cap.show { opacity:1; transform:translateX(-50%) translateY(0); }
 
     /* ── Room panel ── */
     #roompanel {
@@ -232,6 +258,8 @@
     <button class="tab" data-room="3">Kamer 3</button>
   </div>
   <div id="hint">Selecteer een meubel hieronder ↓</div>
+  <div id="greet"><div class="gmain"></div><div class="gsub"></div></div>
+  <div id="cap"></div>
   <button id="undo">↩ Undo</button>
   <button id="roomBtn">🏠 Kamer</button>
   <button id="rot">↻ Roteer</button>
@@ -260,6 +288,8 @@
   <script src="js/storage.js"></script>
   <script src="js/ui.js"></script>
   <script src="js/input.js"></script>
+  <script src="js/cat.js"></script>
+  <script src="js/person.js"></script>
   <script src="js/main.js"></script>
 </body>
 </html>

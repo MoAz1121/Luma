@@ -13,6 +13,9 @@ let wallHitPlane = null;
 let _particles;
 const _pVel = [];
 
+let _ambient, _sun, _cozy;          // lights, steered by time-of-day
+let _winGlass, _celestial, _stars;  // living-window pieces
+
 function initScene(container) {
   scene = new THREE.Scene();
 
@@ -28,12 +31,16 @@ function initScene(container) {
   renderer.outputEncoding = THREE.sRGBEncoding;
   container.appendChild(renderer.domElement);
 
-  scene.add(new THREE.AmbientLight(0xfff8f0, 0.65));
-  const sun = new THREE.DirectionalLight(0xfff0e0, 0.70);
-  sun.position.set(15, 25, 10);
-  scene.add(sun);
-  const fill = new THREE.DirectionalLight(0xe0f0ff, 0.18);
+  _ambient = new THREE.AmbientLight(0xfff8f0, 0.65);
+  scene.add(_ambient);
+  _sun = new THREE.DirectionalLight(0xfff0e0, 0.70);
+  _sun.position.set(15, 25, 10);
+  scene.add(_sun);
+  const fill = new THREE.DirectionalLight(0xffe8d0, 0.18);   // warm fill (was cool blue)
   fill.position.set(-8, 10, -8); scene.add(fill);
+  _cozy = new THREE.PointLight(0xffb866, 0.32, 34);          // warm glow pooling through room
+  _cozy.position.set(0, 4.5, 0);
+  scene.add(_cozy);
 
   _buildRoom();
   _initParticles();
@@ -100,12 +107,37 @@ function _buildRoom() {
   const bV2 = new THREE.Mesh(new THREE.BoxGeometry(.05, 1.44, .04), barMat);
   bV2.position.set(2, 2.6, wz + .06); _addRoom(bV2);
 
+  // Living window: sky glass + sun/moon + stars, steered by time-of-day
+  _winGlass = wg;
+  _celestial = new THREE.Mesh(
+    new THREE.PlaneGeometry(.62, .62),
+    new THREE.MeshBasicMaterial({ map: _glowTexture(), color: 0xfff4d8,
+      transparent: true, opacity: .9, depthWrite: false })
+  );
+  _celestial.position.set(2.55, 3.0, wz + .045);
+  _celestial.raycast = () => {}; _addRoom(_celestial);
+
+  const SC = 26, sp = new Float32Array(SC * 3);
+  for (let i = 0; i < SC; i++) {
+    sp[i*3]   = 2 + (Math.random() - .5) * 1.7;
+    sp[i*3+1] = 2.6 + (Math.random() - .5) * 1.2;
+    sp[i*3+2] = wz + .05;
+  }
+  const sgeo = new THREE.BufferGeometry();
+  sgeo.setAttribute('position', new THREE.BufferAttribute(sp, 3));
+  _stars = new THREE.Points(sgeo, new THREE.PointsMaterial({
+    color: 0xfffef0, size: .06, transparent: true, opacity: .95 }));
+  _stars.visible = false; _stars.raycast = () => {}; _addRoom(_stars);
+
+  applyTimeOfDay();
+
   const patch = new THREE.Mesh(
-    new THREE.PlaneGeometry(1.6, 2.0),
-    new THREE.MeshBasicMaterial({ color: 0xfff8e0, transparent: true, opacity: .08, depthWrite: false })
+    new THREE.PlaneGeometry(3.4, 3.4),
+    new THREE.MeshBasicMaterial({ map: _glowTexture(), color: 0xffe6b0,
+      transparent: true, opacity: .22, depthWrite: false, blending: THREE.AdditiveBlending })
   );
   patch.rotation.x = -Math.PI / 2;
-  patch.position.set(1.6, .02, -(H - 2.5)); _addRoom(patch);
+  patch.position.set(1.6, .02, -(H - 2.6)); _addRoom(patch);
 
   // Invisible hit plane for wall-item raycasting (back wall, facing +Z)
   wallHitPlane = new THREE.Mesh(
@@ -152,6 +184,22 @@ function setWallColor(hex) {
 }
 function setFloorColor(hex) {
   if (_floorMesh) _floorMesh.material.color.setHex(hex);
+}
+
+// ── Time-of-day: living window sky + light mood (real clock) ────────────────
+function applyTimeOfDay() {
+  const h = new Date().getHours();
+  let sky, cel, celY, amb, sun, cozy, stars;
+  if      (h >= 5  && h < 8)  { sky=0xf3c6a6; cel=0xfff0d0; celY=2.2; amb=.60; sun=.62; cozy=.40; stars=false; } // dawn
+  else if (h >= 8  && h < 17) { sky=0xbfe3f2; cel=0xfff4d8; celY=3.0; amb=.66; sun=.72; cozy=.30; stars=false; } // day
+  else if (h >= 17 && h < 20) { sky=0xf0a878; cel=0xffc890; celY=2.2; amb=.58; sun=.55; cozy=.55; stars=false; } // dusk
+  else                        { sky=0x2c3560; cel=0xdfe6ff; celY=3.0; amb=.50; sun=.30; cozy=.78; stars=true;  } // night
+  if (_winGlass)  _winGlass.material.color.setHex(sky);
+  if (_celestial) { _celestial.material.color.setHex(cel); _celestial.position.y = celY; }
+  if (_stars)     _stars.visible = stars;
+  if (_ambient)   _ambient.intensity = amb;
+  if (_sun)       _sun.intensity = sun;
+  if (_cozy)      _cozy.intensity = cozy;
 }
 
 function _initParticles() {

@@ -73,17 +73,17 @@ function hideColorRow() { _colorRow.style.display = 'none'; }
 
 // ── Room panel ─────────────────────────────────────────────────────────────
 const WALL_COLORS = [
-  { label: 'Roze',     hex: 0xee9888 }, { label: 'Salie',     hex: 0x7ab090 },
-  { label: 'Blauw',    hex: 0x7aaac8 }, { label: 'Zand',      hex: 0xd0a850 },
-  { label: 'Lavendel', hex: 0xaa88c8 }, { label: 'Wit',       hex: 0xf0ece8 },
+  { label: 'Roze',     hex: 0xe9b9b0 }, { label: 'Salie',     hex: 0x9cbfa4 },
+  { label: 'Blauw',    hex: 0x9fc0d6 }, { label: 'Zand',      hex: 0xdcc39a },
+  { label: 'Lavendel', hex: 0xc3b0d8 }, { label: 'Wit',       hex: 0xf2ece2 },
 ];
 const FLOOR_COLORS = [
-  { label: 'Naturel',  hex: 0xe8c890 }, { label: 'Eiken',     hex: 0xd4a060 },
-  { label: 'Grijs',    hex: 0xa8a098 }, { label: 'Leisteen',  hex: 0x909898 },
-  { label: 'Wit',      hex: 0xf4f0e8 }, { label: 'Walnoot',   hex: 0x8c6840 },
+  { label: 'Naturel',  hex: 0xdcc3a0 }, { label: 'Eiken',     hex: 0xc9a877 },
+  { label: 'Grijs',    hex: 0xb0a89e }, { label: 'Leisteen',  hex: 0x8f9694 },
+  { label: 'Wit',      hex: 0xefe9df }, { label: 'Walnoot',   hex: 0x8c6840 },
 ];
 
-let _curWall = 0xaa88c8, _curFloor = 0xe8c890;
+let _curWall = 0xe3cdd6, _curFloor = 0xc9a877;
 
 function _buildRoomPanel() {
   _roomPanel = document.getElementById('roompanel');
@@ -172,6 +172,35 @@ function _buildRoomPanel() {
     _typeRow.appendChild(btn);
   }
   _roomPanel.appendChild(_typeRow);
+
+  // Gezelschap (kat / bewoner aan-uit)
+  const compRow = document.createElement('div');
+  compRow.style.cssText = 'display:flex;align-items:center;gap:6px;margin-top:2px;';
+  const compLbl = document.createElement('span');
+  compLbl.style.cssText = 'font-size:11px;color:#8a7060;min-width:36px;';
+  compLbl.textContent = 'Leven';
+  compRow.appendChild(compLbl);
+  function compToggle(label, key, get, set) {
+    const btn = document.createElement('button');
+    const draw = () => {
+      const on = get();
+      btn.textContent = label + (on ? ' aan' : ' uit');
+      btn.style.cssText = 'font-size:11px;padding:6px 10px;border-radius:8px;border:1.5px solid ' +
+        (on ? '#9cc4a0' : '#dcc8b8') + ';background:' + (on ? '#eef6ef' : '#f5f0ea') +
+        ';color:#7a6858;cursor:pointer;font-weight:600;touch-action:manipulation;';
+    };
+    draw();
+    btn.addEventListener('pointerdown', e => {
+      e.stopPropagation();
+      const nv = !get(); set(nv);
+      try { localStorage.setItem(key, nv ? '1' : '0'); } catch {}
+      draw();
+    });
+    return btn;
+  }
+  compRow.appendChild(compToggle('🐱 Kat', 'luma_cat_on', () => Cat.enabled, b => Cat.setEnabled(b)));
+  compRow.appendChild(compToggle('🧍 Bewoner', 'luma_person_on', () => Person.enabled, b => Person.setEnabled(b)));
+  _roomPanel.appendChild(compRow);
 
   // Alles verwijderen
   const clearBtn = document.createElement('button');
@@ -272,6 +301,48 @@ function renderInventory(roomType) {
       if (typeof onCatalogSelect === 'function') onCatalogSelect(null, null);
     }
   }
+}
+
+// ── Greeting on open (time-of-day) ──────────────────────────────────────────
+const GREET_NAME = 'mijn schatje';   // zet hier haar naam voor een persoonlijke begroeting, bv. 'lieverd'
+function showGreeting() {
+  const el = document.getElementById('greet');
+  if (!el) return;
+  const h = new Date().getHours();
+  let main, emoji, subs;
+  if      (h >= 5  && h < 12) { main='Goodmorning'; emoji='☀️'; subs=['Did you sleep well baby','Kom snel naar me toe','I missed you tonight']; }
+  else if (h >= 12 && h < 18) { main='Hey there'; emoji='🐱'; subs=['Heb je al gegeten baby','Thinking about you','Hope your day is good']; }
+  else if (h >= 18 && h < 23) { main='Goodevening'; emoji='🌙'; subs=['Hoe was je dag cutie','Wish you were here','Kom lekker bij me in bed baby']; }
+  else                        { main='Slaaplekker';  emoji='💤'; subs=['Make sure you dream of me','Tot morgen baby 🌙','I love you so much']; }
+  el.querySelector('.gmain').textContent = main + (GREET_NAME ? ', ' + GREET_NAME : '') + ' ' + emoji;
+  el.querySelector('.gsub').textContent  = subs[Math.floor(Math.random() * subs.length)];
+  requestAnimationFrame(() => el.classList.add('show'));
+  setTimeout(() => el.classList.remove('show'), 3400);
+}
+
+// ── Memory captions (sweet note when a special item is selected) ────────────
+// Edit/extend freely — alleen items met een regel hier tonen een onderschrift.
+const CAPTIONS = {
+  bed:        'One day we will get to cuddle here',
+  sofa:       'Cant wait to watch movies on this sofa with you',
+  plant:      'I made sure they arent roses <3',
+  photoframe: 'Look at how cute we are',
+  lamp:       'You are the brightest light in my life',
+};
+let _capTimer = null;
+function showCaption(id) {
+  const el = document.getElementById('cap');
+  if (!el) return;
+  const txt = CAPTIONS[id];
+  if (!txt) { el.classList.remove('show'); return; }
+  el.textContent = '💬 ' + txt;
+  el.classList.add('show');
+  clearTimeout(_capTimer);
+  _capTimer = setTimeout(() => el.classList.remove('show'), 4000);
+}
+function hideCaption() {
+  const el = document.getElementById('cap');
+  if (el) el.classList.remove('show');
 }
 
 // ── Helpers ────────────────────────────────────────────────────────────────
