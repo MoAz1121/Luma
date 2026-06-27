@@ -1,10 +1,11 @@
 'use strict';
 // A little cat that lives in the room: wanders the floor, sits, and can be petted.
 const Cat = (function () {
-  let group = null, state = 'idle', tu = 0, target = null, bob = 0, enabled = true;
+  let group = null, shadow = null, state = 'idle', tu = 0, target = null, bob = 0, enabled = true;
   const SPEED = 1.05;
   const hearts = [];
   let _heartTex = null;
+  const REACTIONS = ['😺 Miauw!', '😸 Prrr...', '😻 *spint zacht*', '🐟 Mauw?', '😺 *kopjes geven*'];
 
   function build(col = 0x9a9690) {
     const dark = 0x2a2a2a;
@@ -27,21 +28,33 @@ const Cat = (function () {
     group.position.set(0, 0, 0);
     group.visible = enabled;
     scene.add(group);
+    shadow = _contactShadow(.8);
+    shadow.visible = enabled;
+    scene.add(shadow);
     pickTarget();
   }
 
   function bound() { return Math.max(1, GS / 2 - 1); }
   function pickTarget() {
     const b = bound();
-    target = new THREE.Vector3((Math.random()*2-1)*b, 0, (Math.random()*2-1)*b);
+    // ~40% of the time the cat drifts toward the resident — they're buddies
+    if (typeof Person !== 'undefined' && Person.group && Person.enabled && Math.random() < 0.4) {
+      const p = Person.group.position;
+      target = new THREE.Vector3(
+        Math.max(-b, Math.min(b, p.x + (Math.random()-.5) * 0.9)), 0,
+        Math.max(-b, Math.min(b, p.z + (Math.random()-.5) * 0.9)));
+    } else {
+      target = new THREE.Vector3((Math.random()*2-1)*b, 0, (Math.random()*2-1)*b);
+    }
     state = 'walk';
   }
 
-  function setEnabled(b) { enabled = b; if (group) group.visible = b; }
+  function setEnabled(b) { enabled = b; if (group) group.visible = b; if (shadow) shadow.visible = b; }
 
   function tick(dt) {
     if (!group || !enabled) return;
     tu += dt;
+    if (shadow) shadow.position.set(group.position.x, .012, group.position.z);
     if (state === 'walk' && target) {
       const dx = target.x - group.position.x, dz = target.z - group.position.z;
       const dist = Math.hypot(dx, dz);
@@ -56,7 +69,9 @@ const Cat = (function () {
       }
     } else if (state === 'idle') {
       group.position.y = 0;
-      if (tu > 1.6 + Math.random() * 2.5) pickTarget();
+      const near = (typeof Person !== 'undefined' && Person.group && Person.enabled &&
+        group.position.distanceTo(Person.group.position) < 1.4);
+      if (tu > (near ? 4 + Math.random() * 4 : 1.6 + Math.random() * 2.5)) pickTarget();
     }
     tickHearts(dt);
   }
@@ -66,6 +81,7 @@ const Cat = (function () {
     state = 'idle'; tu = 0;
     group.position.y = .12;               // happy little hop
     spawnHearts();
+    if (typeof setHint === 'function') setHint(REACTIONS[Math.floor(Math.random() * REACTIONS.length)]);
     if (typeof playSelect === 'function') playSelect();
   }
 

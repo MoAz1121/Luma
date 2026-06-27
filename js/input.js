@@ -240,10 +240,8 @@ function initInput() {
     } else if (InputState.mode === 'idle' && !_dragging) {
       if (_personHit && !_movingId) {
         Person.greet(); _personHit = false;
-        setHint('🙋 Hoi!');
       } else if (_catHit && !_movingId) {
         Cat.pet(); _catHit = false;
-        setHint('😺 Miauw!');
       } else if (_movingId) {
         const reTap = (_currentSelPlaced === _movingId);
         _currentSelPlaced = _movingId;

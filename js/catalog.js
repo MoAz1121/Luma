@@ -126,6 +126,19 @@ function _glowTexture() {
   }
   return _glowTex;
 }
+// Soft round contact shadow that sits flat on the floor (for cat / resident)
+function _contactShadow(size) {
+  const m = new THREE.Mesh(
+    new THREE.PlaneGeometry(size, size),
+    new THREE.MeshBasicMaterial({
+      map: _glowTexture(), color: 0x2a1c10, transparent: true,
+      opacity: .22, depthWrite: false,
+    })
+  );
+  m.rotation.x = -Math.PI / 2;
+  m.raycast = () => {};
+  return m;
+}
 // Flat horizontal glow disc on the floor — warm light pool under a lamp etc.
 function _floorGlow(size, color, opacity) {
   const m = new THREE.Mesh(
@@ -625,6 +638,144 @@ const CATALOG = [
         _bg(.04, .92, .04, h,         0,  .48,    0),
         _bg(.62, .84, .06, h,         0, 1.02,    0),
         _bg(.52, .72, .04, 0xcce4f0,  0, 1.02,  .05),
+      ]);
+    }
+  },
+
+  // ── Decoratie / kleine items ──────────────────────────────────────────────
+  {
+    id: 'candle', label: 'Kaars', w: 1, d: 1, h: 0.34, interactive: 'lamp',
+    roomTypes: ['bedroom', 'living', 'kitchen', 'bathroom'],
+    colors: [
+      { label: 'Crème', hex: 0xf0e6d2 }, { label: 'Roze', hex: 0xf0c0c8 },
+      { label: 'Salie', hex: 0xb8cca8 }, { label: 'Wit',  hex: 0xf6f2ea },
+    ],
+    build(h = 0xf0e6d2) {
+      const g = _buildFurniture([
+        _cg(.13, .15, .26, h,            0, .13, 0, 12),
+        _cg(.14, .14, .03, _darken(h, .08), 0, .27, 0, 12),
+      ]);
+      const flame = new THREE.Mesh(new THREE.SphereGeometry(.045, 8, 6),
+        new THREE.MeshBasicMaterial({ color: 0xffd070 }));
+      flame.position.set(0, .33, 0); flame.userData.glow = true; g.add(flame);
+      const pool = _floorGlow(.9, 0xffc070, .30); pool.userData.glow = true; g.add(pool);
+      return g;
+    }
+  },
+  {
+    id: 'books', label: 'Boeken', w: 1, d: 1, h: 0.3,
+    roomTypes: ['bedroom', 'living'],
+    colors: [
+      { label: 'Warm',  hex: 0xc06050 }, { label: 'Blauw', hex: 0x6a90c0 },
+      { label: 'Groen', hex: 0x6fae84 }, { label: 'Oker',  hex: 0xd8a850 },
+    ],
+    build(h = 0xc06050) {
+      return _buildFurniture([
+        _bg(.50, .08, .34, h,             0,   .05, 0),
+        _bg(.46, .08, .30, _lighten(h, .14), .02, .13, .01),
+        _bg(.42, .08, .27, _darken(h, .10), -.02, .21, -.01),
+      ]);
+    }
+  },
+  {
+    id: 'vase', label: 'Vaas', w: 1, d: 1, h: 0.66,
+    roomTypes: ['bedroom', 'living', 'kitchen', 'bathroom'],
+    colors: [
+      { label: 'Klei', hex: 0xc88a6a }, { label: 'Wit',   hex: 0xeee6dc },
+      { label: 'Blauw', hex: 0x7aa0c0 }, { label: 'Zwart', hex: 0x40383a },
+    ],
+    build(h = 0xc88a6a) {
+      return _buildFurniture([
+        _cg(.10, .16, .34, h,             0, .17, 0, 12),
+        _cg(.11, .10, .04, _darken(h, .08), 0, .36, 0, 12),
+        _cg(.02, .02, .24, 0x5a8a50,     -.04, .50, 0, 6),
+        _cg(.02, .02, .22, 0x5a8a50,      .05, .48, .03, 6),
+        _sg(.06, 0xe48aa0,               -.04, .63, 0),
+        _sg(.06, 0xf0c060,                .05, .60, .03),
+        _sg(.055, 0xf0a0b0,               .01, .66, -.03),
+      ]);
+    }
+  },
+  {
+    id: 'pouf', label: 'Poef', w: 1, d: 1, h: 0.34,
+    roomTypes: ['living', 'bedroom'],
+    colors: [
+      { label: 'Mosterd', hex: 0xd8a850 }, { label: 'Roze',  hex: 0xe6a8b4 },
+      { label: 'Salie',   hex: 0x9cbf9c }, { label: 'Grijs', hex: 0xb0a89e },
+    ],
+    build(h = 0xd8a850) {
+      return _buildFurniture([
+        _cg(.32, .32, .26, h,             0, .14, 0, 14),
+        _cg(.33, .33, .04, _darken(h, .08), 0, .27, 0, 14),
+      ]);
+    }
+  },
+  {
+    id: 'roundrug', label: 'Rond kleed', w: 2, d: 2, h: 0.08, layer: 'floor',
+    roomTypes: ['living', 'bedroom', 'bathroom'],
+    colors: [
+      { label: 'Zand',  hex: 0xe0c89a }, { label: 'Roze', hex: 0xe8bcc2 },
+      { label: 'Salie', hex: 0xa8c4a4 }, { label: 'Grijs', hex: 0xc2bab0 },
+    ],
+    build(h = 0xe0c89a) {
+      return _buildFurniture([
+        _cg(.92, .92, .04, _darken(h, .12),  0, .02,  0, 28),   // border (darker, low)
+        _cg(.74, .74, .04, h,                0, .055, 0, 28),   // field (raised .035 → no z-fight)
+      ]);
+    }
+  },
+  {
+    id: 'sidetable', label: 'Bijzettafel', w: 1, d: 1, h: 0.5,
+    roomTypes: ['living', 'bedroom'],
+    colors: [
+      { label: 'Eiken', hex: 0xc8a06a }, { label: 'Walnoot', hex: 0x8c6a48 },
+      { label: 'Wit',   hex: 0xe8e0d6 }, { label: 'Zwart',   hex: 0x3a3636 },
+    ],
+    build(h = 0xc8a06a) {
+      return _buildFurniture([
+        _cg(.27, .27, .04, h,             0, .48, 0, 14),
+        _cg(.03, .03, .46, _darken(h, .12), 0, .23, 0, 8),
+        _cg(.17, .17, .03, _darken(h, .12), 0, .02, 0, 14),
+      ]);
+    }
+  },
+  {
+    id: 'teddy', label: 'Knuffel', w: 1, d: 1, h: 0.52,
+    roomTypes: ['bedroom', 'living'],
+    colors: [
+      { label: 'Bruin', hex: 0xb98a5e }, { label: 'Roze',  hex: 0xe6a8b4 },
+      { label: 'Crème', hex: 0xe8dcc8 }, { label: 'Grijs', hex: 0xa8a09a },
+    ],
+    build(h = 0xb98a5e) {
+      return _buildFurniture([
+        _sg(.16, h,              0, .18, 0),
+        _sg(.12, h,              0, .36, .04),
+        _sg(.05, h,            -.09, .46, .02),
+        _sg(.05, h,             .09, .46, .02),
+        _sg(.06, _lighten(h, .12), 0, .32, .13),
+        _sg(.024, 0x2a2424,    -.05, .40, .13),
+        _sg(.024, 0x2a2424,     .05, .40, .13),
+        _sg(.07, h,            -.15, .18, .04),
+        _sg(.07, h,             .15, .18, .04),
+        _sg(.07, h,            -.08, .05, .06),
+        _sg(.07, h,             .08, .05, .06),
+      ]);
+    }
+  },
+  {
+    id: 'smallplant', label: 'Klein plantje', w: 1, d: 1, h: 0.46,
+    roomTypes: ['bedroom', 'living', 'kitchen', 'bathroom'],
+    colors: [
+      { label: 'Terracotta', hex: 0xc87050 }, { label: 'Wit', hex: 0xe8e0d8 },
+      { label: 'Zwart', hex: 0x484040 }, { label: 'Mint', hex: 0x90c0a8 },
+    ],
+    build(h = 0xc87050) {
+      return _buildFurniture([
+        _cg(.12, .09, .18, h,             0, .09, 0, 10),
+        _cg(.13, .13, .03, _darken(h, .08), 0, .18, 0, 10),
+        _sg(.16, 0x6fae84,                0, .32, 0),
+        _sg(.10, 0x7fbf90,              .08, .40, .04),
+        _sg(.10, 0x7fbf90,             -.08, .40, -.02),
       ]);
     }
   },
